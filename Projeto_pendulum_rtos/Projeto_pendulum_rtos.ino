@@ -4,7 +4,6 @@
 #include <PID_v1.h>
 SemaphoreHandle_t xTuningsSemaphore;
 double Setpoint, Input, Output;
-int contador=0; // contador que auxilia calculo de setpoint variavel
 float contf=0; // contador float para Seno
 int i=0,ajust=0;
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
@@ -16,22 +15,21 @@ PID myPID(&Input, &Output, &Setpoint,kp,ki,kd , DIRECT);
 void TaskPID( void *pvParameters );
 void TaskAnalogRead( void *pvParameters );
 void TaskDisplay( void *pvParameters );
-// the setup function runs once when you press reset or power the board
 
 int buttonState = 0; // salva estado do botão
-const int buttonPin1 = 8; // botão de ajuste 
-const int buttonPin2 = 10; // botão de ajuste 
-const int buttonPin3 = 7; // botão de ajuste 
+const int buttonPin1 = 8; // botão de seleção
+const int buttonPin2 = 10; // botão de ajuste - 
+const int buttonPin3 = 7; // botão de ajuste +
 void setup() {
    pinMode(buttonPin1, INPUT_PULLUP);
    pinMode(buttonPin2, INPUT_PULLUP);
    pinMode(buttonPin3, INPUT_PULLUP);
 
-  if ( xTuningsSemaphore == NULL )  // Check to confirm that the Serial Semaphore has not already been created.
-  {
-    xTuningsSemaphore = xSemaphoreCreateMutex();  // Create a mutex semaphore we will use to manage the Serial Port
+  if ( xTuningsSemaphore == NULL )  // Verificando se o Semaforo foi criado
+  {  
+    xTuningsSemaphore = xSemaphoreCreateMutex();  // Criando um semaforo mutex para controle do recurso
     if ( ( xTuningsSemaphore ) != NULL )
-      xSemaphoreGive( ( xTuningsSemaphore ) );  // Make the Serial Port available for use, by "Giving" the Semaphore.
+      xSemaphoreGive( ( xTuningsSemaphore ) ); 
   }
 
   
@@ -40,7 +38,7 @@ void setup() {
   //turn the PID on
   myPID.SetMode(AUTOMATIC);
   lcd.begin(16, 2);
-  // initialize serial communication at 9600 bits per second:
+  // Inicializando comunicação serial 9600 bits por segundo:
   Serial.begin(9600);
   while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB, on LEONARDO, MICRO, YUN, and other 32u4 based boards.
@@ -72,7 +70,7 @@ void setup() {
     ,  0  // Priority
     ,  NULL );
 
-  // Now the task scheduler, which takes over control of scheduling individual tasks, is automatically started.
+  
 }
 void display(){
   if ( xSemaphoreTake( xTuningsSemaphore, ( TickType_t ) 10 ) == pdTRUE ){
@@ -109,7 +107,7 @@ void display(){
 }
 }
 void processa(int x){
-  if ( xSemaphoreTake( xTuningsSemaphore, ( TickType_t ) 10 ) == pdTRUE ){
+ if ( xSemaphoreTake( xTuningsSemaphore, ( TickType_t ) 1 ) == pdTRUE ){
   switch (ajust) {
   case 0:{
     // statements
@@ -135,6 +133,9 @@ void processa(int x){
   xSemaphoreGive( xTuningsSemaphore ); // Now free or "Give" the Serial Port for others.
   }
 }
+
+// Agora, o agendador de tarefas, que assume o controle do agendamento de tarefas individuais,
+  //é iniciado automaticamente.
 void loop()
 {
   // Empty. Things are done in Tasks.
@@ -148,66 +149,32 @@ void TaskPID(void *pvParameters)  // This is a task.
 {
   (void) pvParameters;
 
-/*
-  PID
-  Turns on an LED on for one second, then off for one second, repeatedly.
-
-  Most Arduinos have an on-board LED you can control. On the UNO, LEONARDO, MEGA, and ZERO 
-  it is attached to digital pin 13, on MKR1000 on pin 6. LED_BUILTIN takes care 
-  of use the correct LED pin whatever is the board used.
-  
-  The MICRO does not have a LED_BUILTIN available. For the MICRO board please substitute
-  the LED_BUILTIN definition with either LED_BUILTIN_RX or LED_BUILTIN_TX.
-  e.g. pinMode(LED_BUILTIN_RX, OUTPUT); etc.
-  
-  If you want to know what pin the on-board LED is connected to on your Arduino model, check
-  the Technical Specs of your board  at https://www.arduino.cc/en/Main/Products
-  
-  This example code is in the public domain.
-
-  modified 8 May 2014
-  by Scott Fitzgerald
-  
-  modified 2 Sep 2016
-  by Arturo Guadalupi
-*/
-
-  // initialize digital LED_BUILTIN on pin 13 as an output.
-  pinMode(LED_BUILTIN, OUTPUT);
-
-  for (;;) // A Task shall never return or exit.
+  for (;;) // Uma Tarefa nunca tera um return ou sairá.
   {
+    // verifica o estado do semaforo
     if ( xSemaphoreTake( xTuningsSemaphore, ( TickType_t ) 10 ) == pdTRUE ){
-    myPID.Compute();
+    myPID.Compute(); //calculo pid
     analogWrite(9,Output);
-    xSemaphoreGive( xTuningsSemaphore ); // Now free or "Give" the Serial Port for others.
+    xSemaphoreGive( xTuningsSemaphore ); // Libera o semafro 
   }
   vTaskDelay(10);
-    //vTaskDelay( 1 / portTICK_PERIOD_MS ); // wait for one second
+  
   }
 }
 
 void TaskAnalogRead(void *pvParameters)  // This is a task.
 {
   (void) pvParameters;
-  
-/*
-  AnalogReadSerial
-  Reads an analog input on pin 0, prints the result to the serial monitor.
-  Graphical representation is available using serial plotter (Tools > Serial Plotter menu)
-  Attach the center pin of a potentiometer to pin A0, and the outside pins to +5V and ground.
-
-  This example code is in the public domain.
-*/
 
   for (;;)
   {
-    // read the input on analog pin 0:
+    // Leitura analogica pin 0:
     double temp=0;
     for(i=0;i<amostragem;i++)
     temp += analogRead(A0);
     Input=temp/100;
-    // print out the value you read:
+    // Imprimindo saidas
+    //verifica semaforo
     if ( xSemaphoreTake( xTuningsSemaphore, ( TickType_t ) 10 ) == pdTRUE ){
     Serial.print(Setpoint);
     Serial.print(" ");
@@ -215,17 +182,18 @@ void TaskAnalogRead(void *pvParameters)  // This is a task.
     Serial.print(" ");
     Serial.print(Output);
     Serial.print("\n");
-     xSemaphoreGive( xTuningsSemaphore ); // Now free or "Give" the Serial Port for others.
+     xSemaphoreGive( xTuningsSemaphore ); // libera semaforo
   }
   
-    vTaskDelay(1);  // one tick delay (15ms) in between reads for stability
+    vTaskDelay(1);  // delay (15ms) entre as leituras para estabilidade
   }
 }
 
-void TaskDisplay(void *pvParameters)  // This is a task.
+void TaskDisplay(void *pvParameters)  // display
 {
   (void) pvParameters;
   for(;;){
+    
        buttonState = digitalRead(buttonPin1);
     if (buttonState == LOW) {
      processa(1);
@@ -247,9 +215,9 @@ void TaskDisplay(void *pvParameters)  // This is a task.
      display();
      vTaskDelay(10);
     }
-   //  SetTunings(kp, ki, kd);
-     
   
+     
+
      // vTaskDelay( 1 / portTICK_PERIOD_MS ); 
     }
 }
