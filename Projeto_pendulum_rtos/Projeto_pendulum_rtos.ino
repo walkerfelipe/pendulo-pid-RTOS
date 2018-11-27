@@ -73,7 +73,7 @@ void setup() {
   
 }
 void display(){
-  if ( xSemaphoreTake( xTuningsSemaphore, ( TickType_t ) 10 ) == pdTRUE ){
+  if ( xSemaphoreTake( xTuningsSemaphore, ( TickType_t ) 200 ) == pdTRUE ){
       lcd.clear();
     lcd.setCursor(0,0);
   switch (ajust) {
@@ -107,7 +107,7 @@ void display(){
 }
 }
 void processa(int x){
- if ( xSemaphoreTake( xTuningsSemaphore, ( TickType_t ) 1 ) == pdTRUE ){
+ if ( xSemaphoreTake( xTuningsSemaphore, ( TickType_t ) 200 ) == pdTRUE ){
   switch (ajust) {
   case 0:{
     // statements
@@ -152,7 +152,7 @@ void TaskPID(void *pvParameters)  // This is a task.
   for (;;) // Uma Tarefa nunca tera um return ou sairá.
   {
     // verifica o estado do semaforo
-    if ( xSemaphoreTake( xTuningsSemaphore, ( TickType_t ) 10 ) == pdTRUE ){
+    if ( xSemaphoreTake( xTuningsSemaphore, ( TickType_t ) 200 ) == pdTRUE ){
     myPID.Compute(); //calculo pid
     analogWrite(9,Output);
     xSemaphoreGive( xTuningsSemaphore ); // Libera o semafro 
@@ -175,7 +175,7 @@ void TaskAnalogRead(void *pvParameters)  // This is a task.
     Input=temp/100;
     // Imprimindo saidas
     //verifica semaforo
-    if ( xSemaphoreTake( xTuningsSemaphore, ( TickType_t ) 10 ) == pdTRUE ){
+    if ( xSemaphoreTake( xTuningsSemaphore, ( TickType_t ) 200 ) == pdTRUE ){
     Serial.print(Setpoint);
     Serial.print(" ");
     Serial.print(Input);
